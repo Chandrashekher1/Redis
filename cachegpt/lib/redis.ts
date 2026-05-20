@@ -1,14 +1,12 @@
-import Redis from "ioredis";
+import { createClient } from "redis";
 
-const globalForRedis = globalThis as { redis?: Redis };
+const globalForRedis = globalThis;
 
-const redis = new Redis({
-    host: "localhost",
-    port: 6379,
-    maxRetriesPerRequest: null,
-    enableReadyCheck: false,
-    lazyConnect: true,
-});
+const redis: any =
+    globalForRedis.redis ||
+    createClient({
+        url: process.env.REDIS_URL,
+    });
 
 if (!globalForRedis.redis) {
     redis.on("error", (err) => {
