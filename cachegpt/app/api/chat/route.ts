@@ -1,5 +1,6 @@
 import { askGemini } from "@/lib/gemini";
 import redis from "@/lib/redis";
+import { rateLimiter } from "@/lib/rateLimiter";
 
 function NormalizeQuestion(prompt: string) {
     return prompt.trim().toLowerCase();
@@ -8,6 +9,21 @@ function NormalizeQuestion(prompt: string) {
 export async function POST(req: Request) {
     const { prompt } = await req.json();
     const normalizeQuestion = NormalizeQuestion(prompt);
+
+    const forwardedFor = req.headers.get("x-forwarded-for");
+    const ip = forwardedFor?.split(",")[0] || "unknown";
+
+    // RATE LIMIT CHECK
+    const rateLimit = await rateLimiter(ip);
+
+    if (!rateLimit.allowed) {
+        return Response.json(
+            {
+                error: "Too many requests. Try again later.",
+            },
+            { status: 429 }
+        );
+    }
 
     if (!prompt) {
         return Response.json(
@@ -35,7 +51,7 @@ export async function POST(req: Request) {
 
     // step 3. store in redis for 5 min
 
-    await redis.setex(cacheKey, 60, JSON.stringify(answer))
+    await redis.setEx(cacheKey, 60, JSON.stringify(answer))
 
     return Response.json({
         source: "gemini",

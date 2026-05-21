@@ -1,6 +1,6 @@
 import { createClient } from "redis";
 
-const globalForRedis = globalThis;
+const globalForRedis = globalThis as any;
 
 const redis: any =
     globalForRedis.redis ||
@@ -9,7 +9,7 @@ const redis: any =
     });
 
 if (!globalForRedis.redis) {
-    redis.on("error", (err) => {
+    redis.on("error", (err: any) => {
         console.error("Redis Error:", err);
     });
 
